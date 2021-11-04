@@ -26,7 +26,14 @@ namespace WopiHost.Core.Controllers
         /// Service that can process MS-FSSHTTP requests.
         /// </summary>
         public ICobaltProcessor CobaltProcessor { get; set; }
-
+        private string[] _SupportedShareUrlTypes
+        {
+            get
+            {
+                string[] supportedShareUrlTypes = { "ReadWrite", "ReadOnly" };
+                return supportedShareUrlTypes;
+            }
+        }
         private HostCapabilities HostCapabilities => new()
         {
             SupportsCobalt = CobaltProcessor is not null,
@@ -35,7 +42,20 @@ namespace WopiHost.Core.Controllers
             SupportsExtendedLockLength = true,
             SupportsFolders = true,//?
             SupportsCoauth = true,//?
-            SupportsUpdate = true //TODO: PutRelativeFile - usercannotwriterelative
+
+            SupportsUpdate = true, //TODO: PutRelativeFile - usercannotwriterelative
+
+            //-===============Hesham===========
+            SupportsContainers = true,
+            SupportedShareUrlTypes = _SupportedShareUrlTypes,
+            SupportsDeleteFile = true,
+            SupportsEcosystem = true,
+            SupportsFileCreation = true,
+            SupportsGetFileWopiSrc = true,
+            SupportsRename = true,
+            SupportsScenarioLinks = true,
+            SupportsSecureStore = true,
+            SupportsUserInfo = true
         };
 
         /// <summary>
@@ -234,7 +254,7 @@ namespace WopiHost.Core.Controllers
                             else
                             {
                                 // The file is not currently locked, create and store new lock information
-                                _lockStorage[id] = new LockInfo { DateCreated = DateTime.UtcNow, Lock = newLock };
+                                _lockStorage[id] = new LockInfo { DateCreated = DateTime.UtcNow, Lock = newLock, UserId = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value.ToSafeIdentity() };
                                 return new OkResult();
                             }
                         }
@@ -246,7 +266,7 @@ namespace WopiHost.Core.Controllers
                                 if (existingLock.Lock == oldLock)
                                 {
                                     // Replace the existing lock with the new one
-                                    _lockStorage[id] = new LockInfo { DateCreated = DateTime.UtcNow, Lock = newLock };
+                                    _lockStorage[id] = new LockInfo { DateCreated = DateTime.UtcNow, Lock = newLock, UserId = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value.ToSafeIdentity() };
                                     return new OkResult();
                                 }
                                 else
@@ -300,10 +320,14 @@ namespace WopiHost.Core.Controllers
 
             IActionResult LockOrRefresh(string newLock, LockInfo existingLock)
             {
-                if (existingLock.Lock == newLock)
+                if (existingLock.Lock == newLock )
                 {
                     // File is currently locked and the lock ids match, refresh lock (extend the lock timeout)
                     existingLock.DateCreated = DateTime.UtcNow;
+                    return new OkResult();
+                }
+                if (User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value.ToSafeIdentity() == existingLock.UserId) {
+                    existingLock.Lock = newLock;
                     return new OkResult();
                 }
                 else

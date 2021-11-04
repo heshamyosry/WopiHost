@@ -12,6 +12,7 @@ using Microsoft.Extensions.Options;
 using System;
 using System.Collections.Generic;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Configuration;
 
 namespace WopiHost.Web.Controllers
 {
@@ -19,7 +20,7 @@ namespace WopiHost.Web.Controllers
     {
         private WopiUrlBuilder _urlGenerator;
 
-        private IOptionsSnapshot<WopiOptions> WopiOptions { get; }
+        private WopiOptions WopiOptions { get; }
         private IWopiStorageProvider StorageProvider { get; }
         private IDiscoverer Discoverer { get; }
         private ILoggerFactory LoggerFactory { get; }
@@ -28,9 +29,10 @@ namespace WopiHost.Web.Controllers
         //TODO: remove test culture value and load it from configuration SECTION
         public WopiUrlBuilder UrlGenerator => _urlGenerator ??= new WopiUrlBuilder(Discoverer, new WopiUrlSettings { UiLlcc = new CultureInfo("en-US") });
 
-        public HomeController(IOptionsSnapshot<WopiOptions> wopiOptions, IWopiStorageProvider storageProvider, IDiscoverer discoverer, ILoggerFactory loggerFactory)
+        public HomeController(IConfiguration configuration, IWopiStorageProvider storageProvider, IDiscoverer discoverer, ILoggerFactory loggerFactory)
         {
-            WopiOptions = wopiOptions;
+            WopiOptions = new WopiOptions();
+            configuration.GetSection(WopiConfigurationSections.WOPI_ROOT).Bind(WopiOptions);
             StorageProvider = storageProvider;
             Discoverer = discoverer;
             LoggerFactory = loggerFactory;
@@ -82,7 +84,7 @@ namespace WopiHost.Web.Controllers
 
 
             var extension = file.Extension.TrimStart('.');
-            ViewData["urlsrc"] = await UrlGenerator.GetFileUrlAsync(extension, new Uri(WopiOptions.Value.HostUrl, $"/wopi/files/{id}"), actionEnum); //TODO: add a test for the URL not to contain double slashes between host and path
+            ViewData["urlsrc"] = await UrlGenerator.GetFileUrlAsync(extension, new Uri(WopiOptions.HostUrl, $"/wopi/files/{id}"), actionEnum); //TODO: add a test for the URL not to contain double slashes between host and path
             ViewData["favicon"] = await Discoverer.GetApplicationFavIconAsync(extension);
             return View();
         }

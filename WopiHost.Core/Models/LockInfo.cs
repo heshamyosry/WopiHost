@@ -21,5 +21,7 @@ namespace WopiHost.Core.Models
 		/// Determines whether the lock is expired.
 		/// </summary>
         public bool Expired => DateCreated.AddMinutes(30) < DateTime.UtcNow;
+
+        public string UserId { get; set; }
     }
 }
