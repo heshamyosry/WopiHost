@@ -42,7 +42,7 @@ namespace WopiHost.Core.Controllers
             SupportsExtendedLockLength = true,
             SupportsFolders = true,//?
             SupportsCoauth = true,//?
-
+            
             SupportsUpdate = true, //TODO: PutRelativeFile - usercannotwriterelative
 
             //-===============Hesham===========
@@ -52,7 +52,7 @@ namespace WopiHost.Core.Controllers
             SupportsEcosystem = true,
             SupportsFileCreation = true,
             SupportsGetFileWopiSrc = true,
-            SupportsRename = true,
+            SupportsRename = false,
             SupportsScenarioLinks = true,
             SupportsSecureStore = true,
             SupportsUserInfo = true
@@ -99,6 +99,26 @@ namespace WopiHost.Core.Controllers
                 return Unauthorized();
             }
             return new JsonResult(StorageProvider.GetWopiFile(id)?.GetCheckFileInfo(User, HostCapabilities), null);
+        }
+
+        /// <summary>
+        /// performs file rename opration and Returns the metadata about a file specified by an identifier.
+        /// Specification: https://wopi.readthedocs.io/projects/wopirest/en/latest/files/CheckFileInfo.html
+        /// Example URL path: /wopi/files/(file_id)
+        /// </summary>
+        /// <param name="id">File identifier.</param>
+        /// <returns></returns>
+        [HttpPost("{id}"), WopiOverrideHeader(new[] { "RENAME_FILE" })]
+        public async Task<IActionResult> RenameFile(string id)
+        {
+            var newfilename = HttpContext.Request.Headers["X-WOPI-RequestedName"];
+            if (!(await _authorizationService.AuthorizeAsync(User, new FileResource(id), WopiOperations.Read)).Succeeded)
+            {
+                return Unauthorized();
+            }
+            //Response.StatusCode = StatusCodes.Status404NotFound;
+
+            return new JsonResult(new { Name = newfilename }, null);
         }
 
         /// <summary>
@@ -160,6 +180,14 @@ namespace WopiHost.Core.Controllers
 
                 // Save file contents
                 var newContent = await HttpContext.Request.Body.ReadBytesAsync();
+                if (!file.Exists)
+                {
+                    //new file will be created based on template 
+                    await using (var stream = file.CreateFile())
+                    {
+
+                    }
+                }
                 await using (var stream = file.GetWriteStream())
                 {
                     await stream.WriteAsync(newContent.AsMemory(0, newContent.Length));
@@ -182,6 +210,7 @@ namespace WopiHost.Core.Controllers
         public async Task<IActionResult> PutRelativeFile(string id)
 #pragma warning restore CS1998 // Async method lacks 'await' operators and will run synchronously
         {
+            var newfileName = HttpContext.Request.Headers["X-WOPI-SuggestedTarget"];
             throw new NotImplementedException($"{nameof(PutRelativeFile)} is not implemented yet.");
         }
 
@@ -320,13 +349,15 @@ namespace WopiHost.Core.Controllers
 
             IActionResult LockOrRefresh(string newLock, LockInfo existingLock)
             {
-                if (existingLock.Lock == newLock )
+                if (existingLock.Lock == newLock)
                 {
                     // File is currently locked and the lock ids match, refresh lock (extend the lock timeout)
                     existingLock.DateCreated = DateTime.UtcNow;
+                    existingLock.UserId = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value.ToSafeIdentity();
                     return new OkResult();
                 }
-                if (User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value.ToSafeIdentity() == existingLock.UserId) {
+                if (User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value.ToSafeIdentity() == existingLock.UserId)
+                {
                     existingLock.Lock = newLock;
                     return new OkResult();
                 }

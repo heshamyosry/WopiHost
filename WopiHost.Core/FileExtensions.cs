@@ -49,13 +49,20 @@ namespace WopiHost.Core
                 checkFileInfo.UserCanRename = permissions.HasFlag(WopiUserPermissions.UserCanRename);
                 checkFileInfo.UserCanWrite = permissions.HasFlag(WopiUserPermissions.UserCanWrite);
                 checkFileInfo.WebEditingDisabled = permissions.HasFlag(WopiUserPermissions.WebEditingDisabled);
+                checkFileInfo.TemplateSource = file.Exists? null: "http://host.docker.internal:5010/wopi-docs/test.docx";
             }
             else
             {
                 checkFileInfo.IsAnonymousUser = true;
             }
-
-            checkFileInfo.OwnerId = file.Owner.ToSafeIdentity();
+            if (file.Exists)
+            {
+                checkFileInfo.OwnerId = file.Owner.ToSafeIdentity();
+            }
+            else
+            {
+                checkFileInfo.OwnerId = "DESKTOP-TUOES1T_DELL";
+            }
 
             // Set host capabilities
             checkFileInfo.SupportsCoauth = capabilities.SupportsCoauth;
@@ -75,10 +82,14 @@ namespace WopiHost.Core
             checkFileInfo.SupportsUserInfo = capabilities.SupportsUserInfo;
             checkFileInfo.SupportsFileCreation = capabilities.SupportsFileCreation;
 
-            using (var stream = file.GetReadStream())
+            if (file.Exists)
             {
-                var checksum = Sha.ComputeHash(stream);
-                checkFileInfo.Sha256 = Convert.ToBase64String(checksum);
+
+                using (var stream = file.GetReadStream())
+                {
+                    var checksum = Sha.ComputeHash(stream);
+                    checkFileInfo.Sha256 = Convert.ToBase64String(checksum);
+                }
             }
             checkFileInfo.BaseFileName = file.Name;
             checkFileInfo.FileExtension = "." + file.Extension.TrimStart('.');

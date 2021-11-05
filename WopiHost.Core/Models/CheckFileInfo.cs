@@ -519,6 +519,11 @@
         /// </summary>
         public bool WebEditingDisabled { get; set; }
 
+        /// <summary>
+        /// A string that is the name of the template file.
+        /// TODO: return file based on extention
+        /// </summary>
+        public string TemplateSource { get; set; }
         #endregion
     }
 }

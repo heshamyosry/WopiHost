@@ -25,6 +25,7 @@ namespace WopiHost.Web.Controllers
         private IDiscoverer Discoverer { get; }
         private ILoggerFactory LoggerFactory { get; }
 
+        private readonly IConfiguration _configuration;
 
         //TODO: remove test culture value and load it from configuration SECTION
         public WopiUrlBuilder UrlGenerator => _urlGenerator ??= new WopiUrlBuilder(Discoverer, new WopiUrlSettings { UiLlcc = new CultureInfo("en-US") });
@@ -33,6 +34,7 @@ namespace WopiHost.Web.Controllers
         {
             WopiOptions = new WopiOptions();
             configuration.GetSection(WopiConfigurationSections.WOPI_ROOT).Bind(WopiOptions);
+            _configuration = configuration;
             StorageProvider = storageProvider;
             Discoverer = discoverer;
             LoggerFactory = loggerFactory;
@@ -70,7 +72,7 @@ namespace WopiHost.Web.Controllers
         public async Task<ActionResult> Detail(string id, string wopiAction)
         {
             var actionEnum = Enum.Parse<WopiActionEnum>(wopiAction);
-            var securityHandler = new WopiSecurityHandler(LoggerFactory); //TODO: via DI
+            var securityHandler = new WopiSecurityHandler(LoggerFactory,_configuration); //TODO: via DI
 
             var file = StorageProvider.GetWopiFile(id);
             var token = securityHandler.GenerateAccessToken("Anonymous", file.Identifier);
