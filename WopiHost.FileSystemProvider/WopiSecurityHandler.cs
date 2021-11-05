@@ -2,8 +2,11 @@
 using System.Collections.Generic;
 using System.IdentityModel.Tokens.Jwt;
 using System.Linq;
+using System.Net.Http;
 using System.Security.Claims;
 using System.Text;
+using IdentityModel.Client;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Microsoft.IdentityModel.Tokens;
 using WopiHost.Abstractions;
@@ -16,12 +19,33 @@ namespace WopiHost.FileSystemProvider
         private readonly ILogger _logger;
         private readonly JwtSecurityTokenHandler _tokenHandler = new();
         private SymmetricSecurityKey _key = null;
+        private readonly IConfiguration _configuration;
 
-        private SymmetricSecurityKey Key
+        private SecurityKey Key
         {
             get
             {
-                if (_key is null)
+                var client = new HttpClient();
+                var disco = client.GetDiscoveryDocumentAsync($"{_configuration["AuthServer:Authority"]}").Result;
+
+                var keys = new List<SecurityKey>();
+                foreach (var webKey in disco.KeySet.Keys)
+                {
+                    var _key = new JsonWebKey()
+                    {
+                        Kty = webKey.Kty,
+                        Alg = webKey.Alg,
+                        Kid = webKey.Kid,
+                        X = webKey.X,
+                        Y = webKey.Y,
+                        Crv = webKey.Crv,
+                        E = webKey.E,
+                        N = webKey.N,
+                    };
+                    keys.Add(_key);
+                }
+
+                if (keys is null)
                 {
                     //RandomNumberGenerator rng = RandomNumberGenerator.Create();
                     //byte[] key = new byte[128];
@@ -30,7 +54,7 @@ namespace WopiHost.FileSystemProvider
                     _key = new SymmetricSecurityKey(key);
                 }
 
-                return _key;
+                return keys[0];
             }
         }
 
@@ -57,9 +81,10 @@ namespace WopiHost.FileSystemProvider
         /// Creates a new instance of the <see cref="WopiSecurityHandler"/>.
         /// </summary>
         /// <param name="loggerFactory">An instance of a type used to configure the logging system and create instances of Microsoft.Extensions.Logging.ILogger from the registered Microsoft.Extensions.Logging.ILoggerProviders.</param>
-        public WopiSecurityHandler(ILoggerFactory loggerFactory)
+        public WopiSecurityHandler(ILoggerFactory loggerFactory,IConfiguration configuration)
         {
             _logger = loggerFactory.CreateLogger<WopiSecurityHandler>();
+            _configuration = configuration;
         }
 
         /// <inheritdoc/>
@@ -89,7 +114,10 @@ namespace WopiHost.FileSystemProvider
                 ValidateActor = false,
                 ValidateLifetime = true,
                 ValidateIssuerSigningKey = true,
-                IssuerSigningKey = Key
+                IssuerSigningKey = Key,
+                NameClaimType = "name",
+                RoleClaimType = "role",
+
             };
 
             try

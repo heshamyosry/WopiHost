@@ -79,6 +79,13 @@ namespace WopiHost.FileSystemProvider
             return FileInfo.Open(FileMode.Truncate);
         }
 
+        /// <inheritdoc/>
+        public Stream CreateFile()
+        {
+            return FileInfo.Create();
+            //throw new NotImplementedException();
+        }
+
         /// <summary>
         /// A string that uniquely identifies the owner of the file.
         /// Supported only on Windows and Linux.
