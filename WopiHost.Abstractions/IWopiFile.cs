@@ -62,5 +62,10 @@ namespace WopiHost.Abstractions
         /// Gets r/w stream.
         /// </summary>
         Stream GetWriteStream();
+
+        /// <summary>
+        /// Creates file if not exists.
+        /// </summary>
+        Stream CreateFile();
     }
 }
