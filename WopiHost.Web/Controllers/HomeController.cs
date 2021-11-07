@@ -13,9 +13,12 @@ using System;
 using System.Collections.Generic;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Configuration;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Authentication;
 
 namespace WopiHost.Web.Controllers
 {
+    [Authorize]
     public class HomeController : Controller
     {
         private WopiUrlBuilder _urlGenerator;
@@ -75,10 +78,11 @@ namespace WopiHost.Web.Controllers
             var securityHandler = new WopiSecurityHandler(LoggerFactory,_configuration); //TODO: via DI
 
             var file = StorageProvider.GetWopiFile(id);
+            var x = await HttpContext.GetTokenAsync("access_token");
             var token = securityHandler.GenerateAccessToken("Anonymous", file.Identifier);
 
 
-            ViewData["access_token"] = securityHandler.WriteToken(token);
+            ViewData["access_token"] = x;// securityHandler.WriteToken(token);
             //TODO: fix
             //ViewData["access_token_ttl"] = //token.ValidTo
 

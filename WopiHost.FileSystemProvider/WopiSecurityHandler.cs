@@ -4,7 +4,9 @@ using System.IdentityModel.Tokens.Jwt;
 using System.Linq;
 using System.Net.Http;
 using System.Security.Claims;
+using System.Security.Cryptography;
 using System.Text;
+using IdentityModel;
 using IdentityModel.Client;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
@@ -45,14 +47,14 @@ namespace WopiHost.FileSystemProvider
                     keys.Add(_key);
                 }
 
-                if (keys is null)
-                {
-                    //RandomNumberGenerator rng = RandomNumberGenerator.Create();
-                    //byte[] key = new byte[128];
-                    //rng.GetBytes(key);
-                    var key = Encoding.ASCII.GetBytes("secretKeysecretKeysecretKey123"/* + new Random(DateTime.Now.Millisecond).Next(1,999)*/);
-                    _key = new SymmetricSecurityKey(key);
-                }
+                //if (keys is null)
+                //{
+                //    //RandomNumberGenerator rng = RandomNumberGenerator.Create();
+                //    //byte[] key = new byte[128];
+                //    //rng.GetBytes(key);
+                //    var key = Encoding.ASCII.GetBytes("secretKeysecretKeysecretKey123"/* + new Random(DateTime.Now.Millisecond).Next(1,999)*/);
+                //    _key = new SymmetricSecurityKey(key);
+                //}
 
                 return keys[0];
             }
@@ -81,7 +83,8 @@ namespace WopiHost.FileSystemProvider
         /// Creates a new instance of the <see cref="WopiSecurityHandler"/>.
         /// </summary>
         /// <param name="loggerFactory">An instance of a type used to configure the logging system and create instances of Microsoft.Extensions.Logging.ILogger from the registered Microsoft.Extensions.Logging.ILoggerProviders.</param>
-        public WopiSecurityHandler(ILoggerFactory loggerFactory,IConfiguration configuration)
+        /// <param name="configuration">An instance of configuration</param>
+        public WopiSecurityHandler(ILoggerFactory loggerFactory, IConfiguration configuration)
         {
             _logger = loggerFactory.CreateLogger<WopiSecurityHandler>();
             _configuration = configuration;
@@ -91,12 +94,12 @@ namespace WopiHost.FileSystemProvider
         public SecurityToken GenerateAccessToken(string userId, string resourceId)
         {
             var user = _userDatabase[userId];
-
+            _key = new SymmetricSecurityKey(Encoding.ASCII.GetBytes(Key.ToString()));
             var tokenDescriptor = new SecurityTokenDescriptor
             {
                 Subject = user.Identities.FirstOrDefault(),
                 Expires = DateTime.UtcNow.AddHours(1), //access token ttl: https://wopi.readthedocs.io/projects/wopirest/en/latest/concepts.html#term-access-token-ttl
-                SigningCredentials = new SigningCredentials(Key, SecurityAlgorithms.HmacSha256)
+                SigningCredentials = new SigningCredentials(_key, SecurityAlgorithms.HmacSha256Signature)
             };
 
             return _tokenHandler.CreateToken(tokenDescriptor);
@@ -136,7 +139,7 @@ namespace WopiHost.FileSystemProvider
         public bool IsAuthorized(ClaimsPrincipal principal, string resourceId, WopiAuthorizationRequirement operation)
         {
             //TODO: logic
-            return true;
+            return principal.Identity.IsAuthenticated;
         }
 
         /// <summary>

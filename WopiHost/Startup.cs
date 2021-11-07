@@ -13,6 +13,7 @@ using Microsoft.Extensions.Hosting;
 using Serilog;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using System;
+using Microsoft.AspNetCore.HttpOverrides;
 
 namespace WopiHost
 {
@@ -65,8 +66,14 @@ namespace WopiHost
                 {
                     options.Authority = Configuration["AuthServer:Authority"];
                     options.RequireHttpsMetadata = Convert.ToBoolean(Configuration["AuthServer:RequireHttpsMetadata"]);
-                    options.Audience = "Portal";
+                    options.Audience = "wopi";
                 });
+            services.Configure<ForwardedHeadersOptions>(options =>
+            {
+                options.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
+                options.KnownNetworks.Clear();
+                options.KnownProxies.Clear();
+            });
             // Add WOPI (depends on file provider)
             services.AddWopi(GetSecurityHandler(services, config.Get<WopiHostOptions>().StorageProviderAssemblyName));
         }
@@ -90,6 +97,8 @@ namespace WopiHost
             {
                 app.UseDeveloperExceptionPage();
             }
+            app.UseForwardedHeaders();
+
             app.UseStaticFiles();
             //app.UseHttpsRedirection();
             app.UseSerilogRequestLogging(options =>

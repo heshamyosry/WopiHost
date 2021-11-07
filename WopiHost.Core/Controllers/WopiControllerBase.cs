@@ -54,9 +54,13 @@ namespace WopiHost.Core.Controllers
         /// <param name="wopiHostOptions">WOPI Host configuration object</param>
         protected WopiControllerBase(IWopiStorageProvider storageProvider, IWopiSecurityHandler securityHandler, IOptionsSnapshot<WopiHostOptions> wopiHostOptions)
         {
+            System.Net.ServicePointManager.ServerCertificateValidationCallback +=
+    (sender, cert, chain, sslPolicyErrors) => { return true; };
+
             StorageProvider = storageProvider;
             SecurityHandler = securityHandler;
             WopiHostOptions = wopiHostOptions;
+
         }
 
         /// <summary>

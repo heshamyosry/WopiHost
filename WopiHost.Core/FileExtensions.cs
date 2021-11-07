@@ -37,9 +37,9 @@ namespace WopiHost.Core
             if (principal is not null)
             {
                 checkFileInfo.UserId = principal.FindFirst(ClaimTypes.NameIdentifier)?.Value.ToSafeIdentity();
-                checkFileInfo.UserFriendlyName = principal.FindFirst(ClaimTypes.Name)?.Value;
+                checkFileInfo.UserFriendlyName = principal.FindFirst(ClaimTypes.GivenName)?.Value;
 
-                var permissions = (WopiUserPermissions)Enum.Parse(typeof(WopiUserPermissions), principal.FindFirst(WopiClaimTypes.USER_PERMISSIONS).Value);
+                var permissions = (WopiUserPermissions)Enum.Parse(typeof(WopiUserPermissions), (WopiUserPermissions.UserCanWrite | WopiUserPermissions.UserCanRename | WopiUserPermissions.UserCanAttend | WopiUserPermissions.UserCanPresent).ToString());//(WopiUserPermissions)Enum.Parse(typeof(WopiUserPermissions), principal.FindFirst(WopiClaimTypes.USER_PERMISSIONS).Value);
 
                 checkFileInfo.ReadOnly = permissions.HasFlag(WopiUserPermissions.ReadOnly);
                 checkFileInfo.RestrictedWebViewOnly = permissions.HasFlag(WopiUserPermissions.RestrictedWebViewOnly);
